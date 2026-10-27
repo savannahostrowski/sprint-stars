@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f1eb">
+  <meta name="description" content="{{description}}">
+  <title>{{brand}} · {{name}}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23f2bd34'/%3E%3Ctext x='12' y='45' font-size='40' fill='white' font-family='monospace'%3E%E2%98%85%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+  <script id="app-config" type="application/json">{{app_config}}</script>
+  <script src="/static/app.js" type="module"></script>
+</head>
+<body>
+<a class="skip-link" href="#board-title">Skip to leaderboard</a>
+<header><a class="wordmark" href="/"><span class="brand-mark" aria-hidden="true">★</span> {{brand}}</a><nav aria-label="Main"><a class="repo-link" href="{{scope_url}}" target="_blank" rel="noopener noreferrer"><span class="repo-full">{{scope_label}}</span><span class="repo-short">{{scope_short}}</span> ↗</a><button id="theme" aria-label="Switch to dark theme" aria-pressed="false">☼</button></nav></header>
+<main>
+  <section aria-label="Sprint dates" class="range-section"><form id="range"><div class="date-controls"><label>From<input id="start" type="date" required></label><span class="arrow" aria-hidden="true">→</span><label>Through<input id="end" type="date" required></label><button class="primary" id="apply" type="submit">Apply range ↗</button></div></form><div class="range-caption"><span id="range-label">Current week</span></div><p id="draft-note" class="draft-note" hidden>Dates changed. Apply range to update results.</p></section>
+  <section class="summary" aria-label="Sprint totals"><div><span id="total">—</span><span>total activity</span></div><div><span id="closure-total">—</span><span><i class="issue-dot"></i> closures</span></div><div><span id="opened-total">—</span><span><i class="pr-dot"></i> PRs opened</span></div><div><span id="review-total">—</span><span><i class="review-dot"></i> reviews</span></div></section>
+  <section class="board" aria-labelledby="board-title"><div class="board-heading"><div><h1 id="board-title" tabindex="-1">{{name}}</h1><p id="board-subtitle">A gold star for getting things moving.</p></div><span class="refresh-tag">↻ Every {{refresh_minutes}} min</span></div>
+    <div class="board-controls"><div class="tabs" role="group" aria-label="Rank by"><button class="active" data-metric="total" aria-pressed="true">All</button><button data-metric="closures" aria-pressed="false">Closures</button><button data-metric="prs_opened" aria-pressed="false">PRs</button><button data-metric="reviews" aria-pressed="false">Reviews</button></div><div class="search"><span aria-hidden="true">⌕</span><input type="search" id="search" aria-label="Find a contributor" placeholder="Find a contributor…" autocomplete="off" enterkeyhint="search"><button id="clear-search" aria-label="Clear contributor search" hidden>×</button></div></div>
+    <p id="filter-note" class="filter-note" hidden>Team totals above include everyone. Search filters the rankings below.</p>
+    <div class="feedback"><div id="message" role="status" aria-live="polite">Loading GitHub activity…</div><button id="retry" hidden>Retry loading</button></div>
+    <div class="table-scroll"><table role="table" aria-label="Contributor activity"><thead role="rowgroup"><tr role="row"><th scope="col">Rank</th><th scope="col">Contributor</th><th scope="col" class="number">Closures</th><th scope="col" class="number">PRs opened</th><th scope="col" class="number">Reviews</th><th scope="col" class="number">Total <span class="sort-arrow">↓</span></th><th scope="col"><span class="sr-only">Show activity</span></th></tr></thead><tbody id="rows" role="rowgroup"></tbody></table></div>
+    <div id="empty" hidden>No activity in this view yet.</div>
+    <div class="board-footer"><span id="updated">Waiting for the first update</span><span id="row-count"></span></div>
+  </section>
+  <details class="method"><summary>What counts? <span>＋</span></summary><p>Activity covers public repositories selected in metadata.toml: <a href="{{scope_url}}" target="_blank" rel="noreferrer">{{scope_label}}</a>.</p><p><strong>All</strong> adds closures, PRs opened, and reviews. <strong>Closures</strong> counts both closed issues and closed PRs, credited to GitHub’s <code>closed_by</code> actor. <strong>PRs</strong> counts PRs opened, credited to their author. <strong>Reviews</strong> awards one point per person per PR reviewed within the selected range, using the first qualifying submission in that range. Approvals, change requests, and submitted comment reviews count, including reviews later dismissed. Repeated reviews and alternate accounts on the same PR count once. Draft reviews, ordinary comments, reviews of your own PR, commits, and pushes do not earn review points. Reviewing and merging a PR earn one review point and one closure point. Each action is one point, so opening and closing the same PR counts as two actions, potentially for different people. Expanded lists show each item once, with its current status and the actions counted in this range.</p><p>Dates are inclusive. Closure counts use currently closed items whose latest closure falls in the range; reopened items are excluded. PR openings count regardless of their current state. Merged and unmerged PR closures and backports count. Ties share a rank.</p><p>{{roster_description}} Overlapping members are counted once. Verified alternate accounts are combined into one person. {{alias_description}} Bots and people outside the configured roster are excluded; automated closures aren’t reassigned to a human. This is a fun sprint tally, and doesn’t measure collaboration or the size of a contribution.</p><p id="coverage"></p></details>
+</main>
+
+</body></html>

@@ -1,0 +1,36 @@
+# Replace the example values with your team, then restart/redeploy.
+name = "Our team leaderboard"
+brand = "Sprint Stars"
+
+# Every public repo in these orgs, plus any individually selected repos.
+# For repo-only tracking, leave organizations = []. Overlaps count once.
+organizations = ["your-org"]
+repositories = [] # e.g. ["another-org/shared-project"]
+
+# GitHub usernames, not email addresses. Only these people earn points.
+# Strings and tables can be mixed; tables optionally set display names.
+contributors = [
+  "alice",
+  { login = "bob", name = "Bob Example" },
+]
+
+refresh_minutes = 20
+# IANA timezone for the server's default week; the browser uses its local zone.
+timezone = "UTC"
+
+# Optional: combine a person's alternate account with their listed identity.
+# Do not also list the alternate account in contributors.
+[aliases]
+# alice-work = "alice"
+
+# Optional: supplement contributors with a live CSV roster.
+# Omit this section to use only the explicit list above.
+# CSV columns: name, GitHub login, joined date, departed date.
+# Rows without a login or with a departure date are omitted.
+# [roster]
+# url = "https://example.com/team.csv"
+# page_url = "https://example.com/team"
+# label = "Our team roster"
+# minimum_members = 1 # Source sanity check, before merging contributors.
+
+# Keep GITHUB_TOKEN in the server environment, never in this file.

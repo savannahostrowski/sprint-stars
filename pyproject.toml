@@ -1,0 +1,16 @@
+[project]
+name = "sprint-stars"
+version = "0.1.0"
+license = "MIT"
+description = "A configurable GitHub activity leaderboard"
+requires-python = ">=3.15"
+dependencies = ["fastapi[standard]>=0.138.1", "httpx>=0.28.1"]
+
+[dependency-groups]
+dev = ["pytest>=9.0", "pytest-asyncio>=1.0"]
+
+[tool.fastapi]
+entrypoint = "main:app"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

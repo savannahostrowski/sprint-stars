@@ -1,0 +1,12 @@
+name = "Test team"
+organizations = ["acme"]
+contributors = []
+refresh_minutes = 20
+timezone = "America/Los_Angeles"
+
+[aliases]
+carol-work = "carol"
+
+[roster]
+url = "https://example.test/team.csv"
+minimum_members = 50
