@@ -4,6 +4,8 @@ import io
 import json
 import logging
 import os
+from collections import deque
+from math import ceil
 from hashlib import sha256
 from html import escape
 from contextlib import asynccontextmanager
@@ -22,6 +24,9 @@ from config import load_metadata
 ROOT = Path(__file__).parent
 SCHEMA_VERSION = 7
 IDENTITY_VERSION = 1
+MAX_PENDING_REFRESHES = 4
+MAX_NEW_RANGES_PER_MINUTE = 10
+MAX_SNAPSHOTS_PER_REFRESH = 3
 METADATA = load_metadata(ROOT / "metadata.toml")
 REFRESH_SECONDS = METADATA.refresh_seconds
 DEFAULT_TIMEZONE = os.getenv("SPRINT_TIMEZONE", METADATA.timezone)
@@ -198,6 +203,18 @@ class Store:
         self.source_lock = asyncio.Lock()
         self.graphql_enabled = None
         self.status = None
+        self.new_ranges = deque()
+        self.fetch_starts = deque()
+
+    def claim(self, attempts, limit, window):
+        now = monotonic()
+        while attempts and attempts[0] <= now - window:
+            attempts.popleft()
+        if len(attempts) >= limit:
+            retry = max(1, ceil(attempts[0] + window - now))
+            raise HTTPException(429, f"Too many requests for new GitHub data. Try again in {retry} seconds.",
+                                headers={"Retry-After": str(retry)})
+        attempts.append(now)
 
     def load_seed(self, data):
         if (data.get("schema_version") != SCHEMA_VERSION
@@ -329,6 +346,8 @@ class Store:
             await self.check_github_status()
             if self.source and monotonic() - self.source[0] < self.metadata.refresh_seconds and lower >= self.source[1]:
                 return self.source
+            # This budget is shared across viewers and applies even when dates/IPs change.
+            self.claim(self.fetch_starts, MAX_SNAPSHOTS_PER_REFRESH, self.metadata.refresh_seconds)
             # Warm every cached range from the same snapshot on the next cycle.
             lower = min([lower, *(bounds(*key)[0] for key in self.cache)])
             async def organization_repos(organization):
@@ -395,14 +414,28 @@ class Store:
         return {**data, "repositories": repos, "repository_count": len(repos), "updated_at": updated_at}
 
     async def get(self, key, force=False):
+        now = monotonic()
+        # Failed, uncached ranges must not accumulate indefinitely.
+        for failed, until in list(self.retry_after.items()):
+            if until <= now and failed not in self.cache and failed not in self.pending:
+                self.retry_after.pop(failed, None)
+                self.errors.pop(failed, None)
         cached = self.cache.get(key)
         if cached and not force:
-            if (monotonic() - cached[0] >= self.metadata.refresh_seconds
-                    and monotonic() >= self.retry_after.get(key, 0)):
-                self.queue_refresh(key)
+            if (now - cached[0] >= self.metadata.refresh_seconds
+                    and now >= self.retry_after.get(key, 0)):
+                try:
+                    self.queue_refresh(key)
+                except HTTPException as exc:
+                    if exc.status_code != 429:
+                        raise
+                    self.errors[key] = "Refreshes are busy. Showing the last successful update; retrying automatically."
+                    self.retry_after[key] = now + int(exc.headers["Retry-After"])
             return self.result(key)
-        if not force and not cached and monotonic() < self.retry_after.get(key, 0):
+        if not force and not cached and now < self.retry_after.get(key, 0):
             raise HTTPException(503, "GitHub is unavailable or rate-limited. Try again shortly.")
+        if not force and not cached and key not in self.pending:
+            self.claim(self.new_ranges, MAX_NEW_RANGES_PER_MINUTE, 60)
         result = await asyncio.shield(self.queue_refresh(key))
         if result is None:
             raise HTTPException(503, "GitHub is unavailable or rate-limited. Try again shortly.")
@@ -410,6 +443,8 @@ class Store:
 
     def queue_refresh(self, key):
         if key not in self.pending:
+            if len(self.pending) >= MAX_PENDING_REFRESHES:
+                raise HTTPException(429, "Refreshes are busy. Try again shortly.", headers={"Retry-After": "5"})
             self.pending[key] = asyncio.create_task(self.refresh(key))
         return self.pending[key]
 
@@ -417,6 +452,13 @@ class Store:
         try:
             try:
                 data = await self.collect(*key)
+            except HTTPException as exc:
+                if exc.status_code != 429 or key not in self.cache:
+                    raise
+                self.errors[key] = "GitHub fetches are temporarily limited. Showing the last successful update; retrying automatically."
+                self.retry_after[key] = monotonic() + int(exc.headers["Retry-After"])
+                self.pending.pop(key, None)
+                return self.result(key)
             except (httpx.HTTPError, ValueError, KeyError) as exc:
                 log.warning("GitHub refresh failed: %s", type(exc).__name__)
                 self.errors[key] = (
